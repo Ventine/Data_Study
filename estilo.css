@@ -271,13 +271,22 @@ html{
     font-size: 14px;
 }
 /* Estas clases se agregaran dinamicamente mediante javascript */
+.skills .skill .php{
+    width: 0%;
+    animation: 2s php forwards;
+}
+@keyframes php {
+    0%{width: 0%;}
+    100%{width: 85%;}
+}
+
 .skills .skill .javascript{
     width: 0%;
     animation: 2s javascript forwards;
 }
 @keyframes javascript {
     0%{width: 0%;}
-    100%{width: 75%;}
+    100%{width: 80%;}
 }
 
 .skills .skill .htmlcss{
@@ -286,34 +295,25 @@ html{
 }
 @keyframes htmlcss {
     0%{width: 0%;}
-    100%{width: 89%;}
-}
-
-.skills .skill .photoshop{
-    width: 0%;
-    animation: 2s photoshop forwards;
-}
-@keyframes photoshop {
-    0%{width: 0%;}
     100%{width: 95%;}
 }
 
-.skills .skill .wordpress{
+.skills .skill .angular{
     width: 0%;
-    animation: 2s wordpress forwards;
+    animation: 2s angular forwards;
 }
-@keyframes wordpress {
+@keyframes angular {
     0%{width: 0%;}
-    100%{width: 81%;}
+    100%{width: 71%;}
 }
 
-.skills .skill .drupal{
+.skills .skill .spring{
     width: 0%;
-    animation: 2s drupal forwards;
+    animation: 2s spring forwards;
 }
-@keyframes drupal {
+@keyframes spring {
     0%{width: 0%;}
-    100%{width: 55%;}
+    100%{width: 65%;}
 }
 
 .skills .skill .comunicacion{
@@ -334,29 +334,29 @@ html{
     100%{width: 70%;}
 }
 
-.skills .skill .creatividad{
+.skills .skill .pensamiento{
     width: 0%;
-    animation: 2s creatividad forwards;
+    animation: 2s pensamiento forwards;
 }
-@keyframes creatividad {
+@keyframes pensamiento {
     0%{width: 0%;}
     100%{width: 99%;}
 }
 
-.skills .skill .dedicacion{
+.skills .skill .aprendizaje{
     width: 0%;
-    animation: 2s dedicacion forwards;
+    animation: 2s aprendizaje forwards;
 }
-@keyframes dedicacion {
+@keyframes aprendizaje {
     0%{width: 0%;}
     100%{width: 65%;}
 }
 
-.skills .skill .proyect{
+.skills .skill .resolucion{
     width: 0%;
-    animation: 2s proyect forwards;
+    animation: 2s resolucion forwards;
 }
-@keyframes proyect {
+@keyframes resolucion {
     0%{width: 0%;}
     100%{width: 94%;}
 }
@@ -407,30 +407,30 @@ html{
     margin-bottom: 10px;
 }
 .curriculum .fila .item .casa{
-    color: #A39C67;
+    color: #6e7b8c;
     font-size: 22px;
     font-weight: bold;
     display: block;
 }
 .curriculum .fila .item .fecha{
     display: block;
-    color: #A39C67;
+    color: #6e7b8c;
     margin-bottom: 10px;
 }
 .curriculum .fila .item p{
     line-height: 24px;
 }
 .curriculum .fila .izq{
-    border-right: 2px solid #A39C67;
+    border-right: 2px solid #6e7b8c;
     margin-right: 20px;
 }
 .curriculum .fila .der{
-    border-left: 2px solid #A39C67;
+    border-left: 2px solid #6e7b8c;
     margin-left: 20px;
 }
 .curriculum .fila .item .conectori{
     height: 2px;
-    background-color: #A39C67;
+    background-color: #6e7b8c;
     width: 47px;
     position: absolute;
     top: 50%;
@@ -442,14 +442,14 @@ html{
     height: 10px;
     width: 10px;
     border-radius: 50%;
-    background-color: #A39C67;
+    background-color: #6e7b8c;
     float: right;
     position: relative;
     bottom: 4px;
 }
 .curriculum .fila .item .conectord{
     height: 2px;
-    background-color: #A39C67;
+    background-color: #6e7b8c;
     width: 47px;
     position: absolute;
     top: 50%;
@@ -461,7 +461,7 @@ html{
     height: 10px;
     width: 10px;
     border-radius: 50%;
-    background-color: #A39C67;
+    background-color: #6e7b8c;
     float: left;
     position: relative;
     bottom: 4px;
