@@ -706,7 +706,8 @@ footer .arriba{
     }
     .portfolio .galeria .proyecto img{
         max-height: 150px !important;
-        width: 100% !important;
+        max-width: 200px !important;
+        margin: 0 auto;
     }
     .contacto .fila{
         display: block;
