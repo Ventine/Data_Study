@@ -1,0 +1,101 @@
+# Guía Completa de Cloud y GitOps  
+**Autor:** Jhonson  
+**Rol:** Desarrollador Cloud / GitOps Advanced  
+
+---
+
+## 1. Introducción
+
+Este documento resume los fundamentos y componentes esenciales del desarrollo Cloud y la automatización GitOps utilizando **AWS**, **GCP**, **GitHub Actions** y **GitLab CI/CD**.  
+Su propósito es servir como referencia técnica para desarrolladores que buscan comprender, implementar y optimizar entornos de nube modernos con flujos declarativos y automatizados.
+
+---
+
+## 2. Fundamentos de Computación en la Nube
+
+La **nube** reemplaza infraestructura física con recursos virtualizados bajo demanda.  
+Modelo: *pago por uso*, escalabilidad automática, disponibilidad global, seguridad integrada y automatización mediante código (IaC).
+
+---
+
+## 3. AWS (Amazon Web Services)
+
+**Enfoque:** control granular, ecosistema amplio, madurez empresarial.  
+
+### Componentes principales
+
+- **EC2:** máquinas virtuales escalables.  
+- **Lambda:** ejecución *serverless* bajo demanda.  
+- **ECS / EKS:** contenedores y Kubernetes administrado.  
+- **S3 / EBS / Glacier:** almacenamiento de objetos, bloques y archivado.  
+- **RDS / DynamoDB / Redshift:** bases de datos relacionales y NoSQL.  
+- **VPC / Route53 / CloudFront:** red privada, DNS y CDN global.  
+- **IAM:** control de acceso y políticas de seguridad.  
+- **CloudFormation / Terraform:** infraestructura como código.  
+- **CloudWatch / CloudTrail:** monitoreo y auditoría.  
+- **CodePipeline / CodeBuild / CodeDeploy:** CI/CD nativo.  
+
+**Ventajas:**  
+Cobertura global, servicios maduros, ecosistema robusto.  
+
+**Desventajas:**  
+Complejidad inicial, curva de aprendizaje alta, costos acumulativos.
+
+---
+
+## 4. GCP (Google Cloud Platform)
+
+**Enfoque:** automatización, integración nativa con Kubernetes, analítica avanzada.  
+
+### Componentes principales
+
+- **Compute Engine / App Engine / Cloud Run / Cloud Functions:** cómputo escalable y serverless.  
+- **GKE:** Kubernetes administrado.  
+- **Cloud Storage:** almacenamiento de objetos con niveles (Standard, Nearline, Coldline, Archive).  
+- **Cloud SQL / Spanner / Firestore / BigQuery:** bases de datos relacionales, distribuidas y analíticas.  
+- **VPC global / Cloud Load Balancing / Cloud CDN:** red global unificada.  
+- **IAM / KMS / Security Command Center:** gestión de seguridad.  
+- **Operations Suite (Stackdriver):** monitoreo, logging y trazabilidad.  
+- **Cloud Build / Deployment Manager / Terraform:** CI/CD e IaC.  
+- **Vertex AI / Dataflow / Pub/Sub:** analítica y machine learning.
+
+**Ventajas:**  
+Integración fluida con contenedores, menor fricción operativa, costos predecibles.  
+
+**Desventajas:**  
+Menor número de servicios, cobertura global más limitada.  
+
+---
+
+## 5. Comparativa Operativa AWS vs GCP
+
+| Aspecto | AWS | GCP |
+|----------|-----|-----|
+| Enfoque | Control granular | Automatización y fluidez |
+| Kubernetes | EKS | GKE (nativo y más integrado) |
+| Serverless | Lambda | Cloud Run / Functions |
+| Analítica | Redshift / Glue | BigQuery / Dataflow |
+| IaC | CloudFormation / Terraform | Deployment Manager / Terraform |
+| Escalabilidad | Alta | Automática |
+| Complejidad inicial | Alta | Media |
+
+---
+
+## 6. GitHub Actions
+
+**Ubicación:** `.github/workflows/*.yml`  
+Define *workflows* (flujos) basados en eventos Git.  
+
+### Ejemplo básico
+```yaml
+name: CI/CD
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm test
