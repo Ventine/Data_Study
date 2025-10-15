@@ -1,0 +1,175 @@
+# Seguridad y Bases de Datos Avanzadas — OWASP, OAuth2/JWT, Snyk, PostgreSQL Tuning, NoSQL
+
+## 1. OWASP (Open Web Application Security Project)
+
+OWASP define los principales riesgos de seguridad en aplicaciones web. El **OWASP Top 10** representa las vulnerabilidades más comunes:
+
+1. **Broken Access Control:** Acceso no autorizado a datos o funciones.
+2. **Cryptographic Failures:** Fallas en cifrado o almacenamiento inseguro de datos.
+3. **Injection:** Inyecciones SQL, NoSQL, LDAP u OS.
+4. **Insecure Design:** Falta de controles de seguridad desde la arquitectura.
+5. **Security Misconfiguration:** Configuración insegura de servidores o frameworks.
+6. **Vulnerable Components:** Dependencias desactualizadas.
+7. **Identification and Authentication Failures:** Autenticación o sesiones débiles.
+8. **Software and Data Integrity Failures:** Dependencias manipuladas.
+9. **Security Logging and Monitoring Failures:** Falta de auditoría o monitoreo.
+10. **Server-Side Request Forgery (SSRF):** Solicitudes mal validadas a recursos internos.
+
+**Mitigación en Spring Boot:**
+
+* Validar entradas con `@Valid`, `@NotNull`, `@Pattern`.
+* Evitar concatenar SQL dinámico (usar PreparedStatements o JPA Criteria).
+* Configurar correctamente CORS y cabeceras.
+* Actualizar dependencias con herramientas automáticas.
+* Registrar auditoría y logs de seguridad.
+
+---
+
+## 2. OAuth2 y JWT (Autenticación y Autorización)
+
+**OAuth2** es un protocolo para autorización segura. Permite a un cliente acceder a recursos protegidos en nombre de un usuario sin exponer credenciales.
+
+**Flujos principales:**
+
+* **Authorization Code:** Aplicaciones web seguras.
+* **Client Credentials:** Comunicación entre servicios backend.
+* **Password Grant:** Deprecado por riesgo de exposición de credenciales.
+
+**JWT (JSON Web Token):** Token firmado que contiene datos (claims) del usuario.
+Estructura: `HEADER.PAYLOAD.SIGNATURE`
+
+Ejemplo:
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqaG9uc29uIiwicm9sZXMiOlsiQURNSU4iXX0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+**Implementación en Spring Boot:**
+
+```java
+@EnableWebSecurity
+public class SecurityConfig {
+  @Bean
+  SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    return http
+      .csrf(AbstractHttpConfigurer::disable)
+      .authorizeHttpRequests(auth -> auth
+        .requestMatchers("/api/public/**").permitAll()
+        .anyRequest().authenticated())
+      .oauth2ResourceServer(oauth2 -> oauth2.jwt())
+      .build();
+  }
+
+  @Bean
+  JwtDecoder jwtDecoder() {
+    return NimbusJwtDecoder.withSecretKey(new SecretKeySpec("claveSecreta".getBytes(), "HmacSHA256")).build();
+  }
+}
+```
+
+**Buenas prácticas:**
+
+* Tokens con expiración corta.
+* Comunicación únicamente sobre HTTPS.
+* Uso de Authorization Server (Keycloak, Auth0, Okta) para emisión segura.
+
+---
+
+## 3. Snyk (Análisis de Vulnerabilidades)
+
+**Snyk** analiza dependencias y detecta vulnerabilidades en bibliotecas.
+
+**Integración con CI/CD (GitHub Actions):**
+
+```yaml
+- name: Snyk Scan
+  uses: snyk/actions/maven@master
+  with:
+    args: test --severity-threshold=high
+  env:
+    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+```
+
+**Beneficios:**
+
+* Detección temprana de vulnerabilidades (CVEs).
+* Sugerencias de versiones seguras.
+* Soporte para Maven, NPM, Gradle, Docker, Terraform.
+* Bloqueo de builds inseguros.
+
+---
+
+## 4. PostgreSQL Tuning
+
+Ajuste fino del rendimiento de PostgreSQL.
+
+**a. Configuración del servidor:**
+
+```
+shared_buffers = 4GB
+work_mem = 64MB
+maintenance_work_mem = 512MB
+effective_cache_size = 12GB
+```
+
+**b. Índices:**
+
+```sql
+CREATE INDEX idx_user_email ON users (email);
+CREATE INDEX idx_data_json ON documents USING GIN (data jsonb_path_ops);
+```
+
+**c. Mantenimiento y monitoreo:**
+
+* `EXPLAIN ANALYZE` para inspección de consultas.
+* `VACUUM` y `ANALYZE` periódicos.
+* `pg_stat_statements` para identificar consultas lentas.
+* `pgBouncer` para gestión de conexiones.
+
+---
+
+## 5. NoSQL Básico
+
+Bases no relacionales diseñadas para escalabilidad y flexibilidad.
+
+**Tipos:**
+
+* **Clave-valor (Redis, DynamoDB):** datos simples, velocidad alta.
+* **Documento (MongoDB):** JSON flexible.
+* **Columna ancha (Cassandra):** grandes volúmenes distribuidos.
+* **Grafo (Neo4j):** relaciones complejas.
+
+**Ejemplo MongoDB:**
+
+```js
+db.users.insertOne({
+  name: "Jhonson",
+  roles: ["DEV", "ADMIN"],
+  lastLogin: new Date()
+});
+```
+
+**Comparativa con SQL:**
+
+* SQL: consistencia fuerte (ACID).
+* NoSQL: disponibilidad y escalabilidad (CAP).
+* SQL: esquema rígido.
+* NoSQL: esquema flexible.
+
+---
+
+## 6. Integración práctica
+
+Arquitectura moderna:
+
+* **Spring Boot + OAuth2/JWT:** seguridad de APIs.
+* **Snyk:** detección de vulnerabilidades en build.
+* **PostgreSQL:** almacenamiento transaccional optimizado.
+* **NoSQL (Redis/MongoDB):** cacheo o datos semi-estructurados.
+* **OWASP:** guía de diseño y control de amenazas.
+
+---
+
+## 7. Conclusión
+
+La seguridad y las bases de datos son capas interdependientes. OWASP establece las amenazas, OAuth2 controla acceso, Snyk protege dependencias, PostgreSQL asegura integridad, y NoSQL aporta elasticidad. Juntas conforman un sistema moderno, seguro y eficiente.
