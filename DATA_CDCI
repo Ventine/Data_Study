@@ -1,0 +1,211 @@
+# CI/CD Avanzado e Infraestructura como Código — Terraform, Pipelines, Rollback y Despliegue Automatizado en Cloud
+
+## 1. Introducción
+
+El objetivo del CI/CD avanzado con **Infraestructura como Código (IaC)** es lograr un flujo completamente automatizado que abarque desde la compilación del código fuente hasta el despliegue en producción, incluyendo la creación y destrucción de la infraestructura. Este enfoque garantiza consistencia, reproducibilidad y rollback controlado.
+
+La herramienta clave para la infraestructura es **Terraform**, mientras que el pipeline (GitHub Actions, GitLab CI, Jenkins o similar) orquesta la ejecución automatizada.
+
+---
+
+## 2. Conceptos Fundamentales
+
+**CI/CD (Continuous Integration / Continuous Delivery / Deployment)**:
+
+* **CI:** compila, ejecuta pruebas y valida integridad del código.
+* **CD:** automatiza despliegues en entornos de prueba o producción.
+
+**Infraestructura como Código (IaC):** definición de recursos cloud mediante código declarativo. Permite versionar la infraestructura y asegurar entornos idénticos.
+
+**Terraform:** herramienta declarativa que administra infraestructura en múltiples nubes mediante archivos `.tf`, controlando el estado real (`terraform.tfstate`).
+
+---
+
+## 3. Flujo General del Pipeline Avanzado
+
+1. **Build:** compila el código y construye la imagen Docker versionada (por `commit hash`).
+2. **Provisionamiento (Terraform):** crea la infraestructura necesaria para alojar la aplicación.
+3. **Deploy:** despliega la aplicación en el entorno recién creado (ECS, EKS, GKE o similar).
+4. **Smoke Tests:** verifica que el sistema funcione correctamente.
+5. **Rollback:** si el despliegue o los tests fallan, restaura la infraestructura y la aplicación a la versión anterior.
+
+---
+
+## 4. Infraestructura como Código con Terraform
+
+Terraform describe la infraestructura deseada mediante archivos `.tf`.
+
+**Ejemplo de infraestructura en AWS (ECS):**
+
+```hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_ecs_cluster" "app_cluster" {
+  name = "app-cluster"
+}
+
+resource "aws_ecs_task_definition" "app_task" {
+  family = "myapp"
+  container_definitions = jsonencode([{
+    name  = "app"
+    image = "ghcr.io/org/myapp:${var.image_tag}"
+    portMappings = [{ containerPort = 8080 }]
+  }])
+  requires_compatibilities = ["FARGATE"]
+  cpu    = "512"
+  memory = "1024"
+}
+
+resource "aws_ecs_service" "app_service" {
+  name            = "app-service"
+  cluster         = aws_ecs_cluster.app_cluster.id
+  task_definition = aws_ecs_task_definition.app_task.arn
+  desired_count   = 2
+  launch_type     = "FARGATE"
+}
+```
+
+**Backend remoto para estado:**
+El archivo `terraform.tfstate` debe almacenarse en un backend remoto (S3, GCS, Terraform Cloud) para evitar conflictos.
+
+**Ejemplo de comandos ejecutados por el pipeline:**
+
+```
+terraform init
+terraform plan -out=tfplan
+terraform apply -auto-approve tfplan
+```
+
+---
+
+## 5. Ejemplo de Pipeline Automatizado (GitHub Actions)
+
+```yaml
+name: deploy
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          docker build -t myapp:${{ github.sha }} .
+          docker tag myapp:${{ github.sha }} ghcr.io/org/myapp:${{ github.sha }}
+          docker push ghcr.io/org/myapp:${{ github.sha }}
+
+  infra:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Plan
+        run: terraform plan -var="image_tag=${{ github.sha }}" -out=tfplan
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+  verify:
+    runs-on: ubuntu-latest
+    needs: infra
+    steps:
+      - name: Smoke test
+        run: curl -f https://myapp.example.com/actuator/health || exit 1
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: verify
+    steps:
+      - uses: hashicorp/setup-terraform@v3
+      - name: Rollback previous version
+        run: terraform apply -auto-approve previous_plan.tfplan
+```
+
+**Fases del pipeline:**
+
+* *build:* compila y sube imagen Docker.
+* *infra:* crea infraestructura con Terraform.
+* *verify:* valida salud de la app.
+* *rollback:* aplica plan anterior si hay fallo.
+
+---
+
+## 6. Rollback Automatizado
+
+Rollback implica revertir la versión del plan de Terraform o del artefacto desplegado.
+
+**Opciones:**
+
+* Guardar `.tfplan` exitosos como artefactos.
+* Versionar imágenes Docker (`myapp:<commit_hash>`).
+* Usar `terraform apply` con plan anterior o destruir la infraestructura fallida.
+
+**Ejemplo manual:**
+
+```
+terraform apply -auto-approve last_successful.tfplan
+```
+
+O en Kubernetes:
+
+```
+kubectl rollout undo deployment/myapp
+```
+
+---
+
+## 7. Despliegue Automatizado en Cloud
+
+Terraform puede desplegar directamente aplicaciones:
+
+* **AWS:** ECS + Fargate, EKS.
+* **GCP:** GKE.
+* **Azure:** AKS.
+
+Ejemplo:
+
+1. Terraform crea red, balanceador y clúster.
+2. Pipeline construye imagen y la publica.
+3. Terraform aplica configuración con la nueva imagen.
+4. Health checks determinan éxito del despliegue.
+5. Rollback si el servicio no responde.
+
+---
+
+## 8. Pipeline Avanzado: Consideraciones
+
+* Validar seguridad y estilo (`terraform fmt`, `terraform validate`, `tflint`, `tfsec`).
+* Usar `terraform workspace` para entornos (`dev`, `staging`, `prod`).
+* Agregar pruebas automáticas después del despliegue.
+* Monitorear pipelines con métricas de ejecución y resultados.
+* Integrar observabilidad (Prometheus, Grafana, Jaeger) en la infraestructura declarada.
+
+---
+
+## 9. Beneficios Operativos
+
+* **Reproducibilidad:** la infraestructura puede reconstruirse idéntica a partir del código.
+* **Rollback confiable:** restauración a estado anterior versionado.
+* **Cero intervención manual:** despliegue completo automatizado.
+* **Auditoría total:** código y estado versionados.
+* **Reducción de errores:** procesos predecibles, validados y repetibles.
+
+---
+
+## 10. Conclusión
+
+La combinación de CI/CD avanzado con Terraform permite un flujo completamente automatizado: crear infraestructura, desplegar la aplicación y revertir si es necesario. La infraestructura se convierte en parte del código fuente, logrando control, trazabilidad y confiabilidad en los despliegues.
+
+---
+
+**Resumen:**
+
+> Terraform administra el entorno, el pipeline orquesta la entrega, y ambos garantizan consistencia entre infraestructura y aplicación. El resultado es un sistema de despliegue continuo, confiable y auditable.
