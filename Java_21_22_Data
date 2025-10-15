@@ -1,0 +1,309 @@
+# Java 21 / 22 — Guía paso a paso con ejemplos
+
+## Propósito
+
+Documento técnico que explica paso a paso las características modernas de Java 21/22: virtual threads, record patterns, structured concurrency, ZGC, profiling y optimización. Incluye ejemplos mínimos ejecutables y comandos para pruebas.
+
+---
+
+## Requisitos previos
+
+* JDK 21 o JDK 22 instalado
+* Maven o Gradle (opcionales)
+* JDK Mission Control (opcional para analizar JFR)
+* Docker (opcional para escenarios de carga)
+
+---
+
+## 1. Virtual Threads (Project Loom)
+
+### Qué es
+
+Hilos ligeros administrados por la JVM que permiten crear miles/millones de hilos sin el coste de hilos del sistema operativo.
+
+### Paso a paso
+
+1. Verificar versión de Java: `java -version`.
+2. Crear proyecto Java simple.
+3. Usar `Executors.newVirtualThreadPerTaskExecutor()` o `Thread.startVirtualThread()`.
+4. Ejecutar y medir consumo de memoria y número de hilos.
+
+### Ejemplo mínimo
+
+```java
+// VirtualThreadsExample.java
+import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
+
+public class VirtualThreadsExample {
+  public static void main(String[] args) throws Exception {
+    try (var ex = Executors.newVirtualThreadPerTaskExecutor()) {
+      IntStream.range(0, 100_000).forEach(i ->
+        ex.submit(() -> {
+          try { Thread.sleep(1000); } catch (InterruptedException e) { }
+          return i;
+        })
+      );
+    }
+    System.out.println("Tareas sometidas");
+  }
+}
+```
+
+**Ejecutar:**
+
+```
+javac VirtualThreadsExample.java
+java VirtualThreadsExample
+```
+
+### Notas
+
+* Virtual threads funcionan bien con I/O bloqueante tradicional (JDBC, sockets) si no se usan call stacks nativas que no soporten virtual threads.
+* No requieren flags en JDK 21 (API permanente para `newVirtualThreadPerTaskExecutor`).
+
+---
+
+## 2. Record Patterns (Pattern Matching para records)
+
+### Qué es
+
+Permiten desestructurar valores de `record` directamente en condiciones `instanceof` y `switch` para extraer componentes con menos boilerplate.
+
+### Paso a paso
+
+1. Definir `record`.
+2. Usar `instanceof RecordType(int a, int b)` o `switch` con patrones.
+3. Compilar y ejecutar.
+
+### Ejemplo mínimo
+
+```java
+// RecordPatternsExample.java
+record Point(int x, int y) {}
+
+public class RecordPatternsExample {
+  public static void main(String[] args) {
+    Object o = new Point(3, 4);
+    if (o instanceof Point(int x, int y)) {
+      System.out.println("x=" + x + ", y=" + y);
+    }
+
+    System.out.println(describe(o));
+  }
+
+  static String describe(Object o) {
+    return switch (o) {
+      case Point(int x, int y) when x == y -> "on diagonal";
+      case Point(int x, int y) -> "Point(" + x + "," + y + ")";
+      default -> "unknown";
+    };
+  }
+}
+```
+
+**Ejecutar:**
+
+```
+javac RecordPatternsExample.java
+java RecordPatternsExample
+```
+
+### Notas
+
+* Record patterns están estables en JDK 21.
+* Permiten nested patterns con records anidados.
+
+---
+
+## 3. Structured Concurrency
+
+### Qué es
+
+API que organiza tareas concurrentes como una unidad estructurada: facilita manejo de errores, cancelación y observabilidad.
+
+### Paso a paso
+
+1. Usar `java.util.concurrent.StructuredTaskScope`.
+2. Crear un scope (`ShutdownOnFailure` o `Concurrent`), `fork` tareas, `join` y `throwIfFailed`.
+3. Gestionar resultados y excepciones dentro del bloque `try-with-resources`.
+
+### Ejemplo mínimo
+
+```java
+// StructuredConcurrencyExample.java
+import java.util.concurrent.*;
+
+public class StructuredConcurrencyExample {
+  public static void main(String[] args) throws Exception {
+    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+      Future<String> a = scope.fork(() -> task("A", 800));
+      Future<String> b = scope.fork(() -> task("B", 1200));
+
+      scope.join(); // espera tareas
+      scope.throwIfFailed();
+
+      System.out.println(a.resultNow() + " | " + b.resultNow());
+    }
+  }
+
+  static String task(String name, int ms) throws InterruptedException {
+    Thread.sleep(ms);
+    return name + " done";
+  }
+}
+```
+
+**Ejecutar:**
+
+```
+javac StructuredConcurrencyExample.java
+java StructuredConcurrencyExample
+```
+
+### Notas
+
+* Combina bien con virtual threads.
+* Asegura que las subtareas no sobrevivan al scope y simplifica rollback de trabajo concurrente.
+
+---
+
+## 4. ZGC (Z Garbage Collector)
+
+### Qué es
+
+Recolección de basura concurrente de baja latencia, diseñada para heaps grandes con pausas sub-milisegundo.
+
+### Paso a paso
+
+1. Ejecutar JVM con `-XX:+UseZGC`.
+2. Ajustar `-Xmx` y `-Xms` según memoria disponible.
+3. Medir pausas con JFR o logs GC si es necesario.
+
+### Ejemplo de ejecución
+
+```
+java -XX:+UseZGC -Xmx8G -jar mi-app.jar
+```
+
+### Notas y flags útiles
+
+* `-XX:+UseZGC` activa ZGC.
+* JDK 21 añade generational mode opt-in (`-XX:+ZGenerational` en algunas versiones) y JDK 23 lo activa por defecto.
+* ZGC reduce pausas, no es el collector por defecto; G1 sigue siendo por defecto en muchas JVMs.
+
+---
+
+## 5. Profiling con JFR y JDK Mission Control
+
+### Qué es
+
+JFR (Java Flight Recorder) captura eventos JVM en producción con baja sobrecarga. JDK Mission Control analiza las grabaciones.
+
+### Paso a paso
+
+1. Iniciar aplicación con JFR activo o lanzar grabación en caliente.
+2. Reproducir la carga/escenario.
+3. Guardar o exportar `.jfr` y abrir en JDK Mission Control.
+
+### Comandos
+
+* Iniciar con grabación corta:
+
+```
+java -XX:StartFlightRecording=filename=recording.jfr,duration=60s -jar mi-app.jar
+```
+
+* Iniciar sin duración (continuo):
+
+```
+java -XX:StartFlightRecording=filename=prod.jfr -jar mi-app.jar
+```
+
+### Análisis
+
+* Revisar CPU samples, allocation profiling, safepoint pauses y blocked threads.
+* Identificar hot methods, contención de locks y uso de memoria.
+
+---
+
+## 6. Optimización y buenas prácticas
+
+### 6.1 Sizing de heap y ZGC
+
+* No sobredimensionar `-Xmx`; ZGC maneja grandes heaps bien, pero medir memory footprint.
+
+### 6.2 Evitar hotspots
+
+* Usar JFR o async-profiler para identificar métodos críticos.
+* Inliner, escape analysis y profiling-guided tuning.
+
+### 6.3 Uso de colecciones y streams
+
+* Para hot paths, preferir estructuras primitivas (`IntStream` vs `stream().mapToInt`) y evitar allocations innecesarias.
+* Reusar buffers y objetos cuando sea seguro.
+
+### 6.4 Concurrencia práctica
+
+* Preferir virtual threads para workloads I/O bloqueante.
+* Usar structured concurrency para agrupar tareas dependientes.
+* Usar `ScopedValue` (Scoped Values) para pasar contexto a hilos sin ThreadLocal donde aplique.
+
+---
+
+## 7. Ejemplo combinado: servidor HTTP simple con virtual threads y tracing
+
+### Código (usando com.sun.net.httpserver.HttpServer para simplicidad)
+
+```java
+// ServerExample.java
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.io.OutputStream;
+
+public class ServerExample {
+  public static void main(String[] args) throws Exception {
+    HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+    server.createContext("/", exchange -> {
+      String resp = "ok";
+      Thread.sleep(100); // I/O simulado
+      exchange.sendResponseHeaders(200, resp.length());
+      try (OutputStream os = exchange.getResponseBody()) { os.write(resp.getBytes()); }
+    });
+
+    server.setExecutor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+    server.start();
+    System.out.println("Server started on 8080");
+  }
+}
+```
+
+**Ejecutar:**
+
+```
+javac ServerExample.java
+java ServerExample
+curl http://localhost:8080/
+```
+
+---
+
+## 8. Riesgos y puntos de atención
+
+* No todas las bibliotecas nativas funcionan bien con virtual threads (JNI o librerías que usan bloqueo nativo). Testear.
+* ZGC es óptimo para baja latencia, pero cambiar collector debe hacerse con pruebas de carga.
+* Features como string templates pueden requerir `--enable-preview` en ciertas builds (ver versión y flags).
+
+---
+
+## 9. Checklist de migración
+
+* Actualizar JDK a 21 (LTS) o 22 si necesita string templates en preview.
+* Ejecutar tests unitarios e integrales con virtual threads.
+* Medir con JFR antes y después de cambios.
+* Revisar dependencias nativas y JNI.
+* Introducir structured concurrency donde convenga para manejo de errores.
+
+---
+
+Fin del documento.
