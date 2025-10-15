@@ -1,0 +1,189 @@
+# Angular 21 — Guía Técnica Avanzada
+
+## Introducción
+
+Angular 21 marca una transición hacia una arquitectura más reactiva, ligera y eficiente. Introduce señales reactivas nativas (Signals), un nuevo sistema de construcción basado en Vite, y optimizaciones de rendimiento enfocadas en SSR (Server Side Rendering) y la eliminación de dependencias legadas.
+
+---
+
+## 1. Arquitectura Moderna
+
+### Componentes Standalone
+
+Los módulos (`NgModule`) ya no son necesarios. Cada componente puede declararse de forma independiente.
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [CommonModule],
+  template: `<h1>Home</h1>`
+})
+export class HomeComponent {}
+```
+
+Ventajas:
+
+* Menos boilerplate.
+* Carga modular y rápida.
+* Simplificación del flujo de dependencias.
+
+---
+
+## 2. Nuevas APIs Reactivas — Signals
+
+Signals permiten gestionar estado de manera reactiva sin `RxJS` para casos simples. Un Signal es un valor que notifica automáticamente los cambios a la vista.
+
+```typescript
+import { Component, signal, computed } from '@angular/core';
+
+@Component({
+  selector: 'app-counter',
+  standalone: true,
+  template: `
+    <p>Contador: {{ count() }}</p>
+    <button (click)="increment()">+</button>
+  `
+})
+export class CounterComponent {
+  count = signal(0);
+  increment() { this.count.update(c => c + 1); }
+}
+```
+
+Ventajas:
+
+* Sin suscripciones manuales.
+* Sin fugas de memoria.
+* Integración directa con el DOM.
+
+---
+
+## 3. Builder Moderno — Vite
+
+Angular 21 utiliza **Vite** como sistema de compilación, reemplazando a Webpack. Basado en *esbuild*, acelera compilaciones y soporta Hot Module Reload (HMR).
+
+```bash
+ng new demo-app --builder vite
+```
+
+Ventajas:
+
+* Arranque instantáneo del servidor de desarrollo.
+* Menor consumo de memoria.
+* Builds de producción más rápidas.
+
+Configuración Vite:
+
+```typescript
+import { defineConfig } from 'vite';
+import angular from '@analogjs/vite-plugin-angular';
+
+export default defineConfig({
+  plugins: [angular()],
+});
+```
+
+---
+
+## 4. Mejoras de Rendimiento
+
+### a. Hydration SSR
+
+Permite reutilizar el HTML renderizado por el servidor sin reinstanciar el árbol de componentes.
+
+### b. Zone.js Opcional
+
+Angular 21 permite ejecutar la aplicación sin Zone.js, usando Signals y efectos reactivos para detectar cambios.
+
+```typescript
+bootstrapApplication(AppComponent, {
+  ngZone: 'noop',
+});
+```
+
+### c. Tree-shaking y Lazy Signals
+
+Elimina dependencias no usadas y retrasa cálculos hasta que son necesarios, optimizando el rendimiento.
+
+---
+
+## 5. Integración con Herramientas Modernas
+
+Angular 21 se integra con:
+
+* **ESBuild y Vite** para compilación.
+* **Vitest** para pruebas unitarias.
+* **Angular DevTools** actualizado para depurar señales y efectos.
+
+Ejemplo de prueba con Vitest:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { CounterComponent } from './counter.component';
+
+describe('CounterComponent', () => {
+  it('incrementa correctamente', () => {
+    const c = new CounterComponent();
+    c.increment();
+    expect(c.count()).toBe(1);
+  });
+});
+```
+
+---
+
+## 6. Tipado y Modo Estricto
+
+Angular 21 fortalece el tipado de plantillas. Cualquier error de tipo ahora detiene la compilación.
+
+```typescript
+interface User { name: string; }
+@Component({ selector: 'app-profile', standalone: true, template: `{{ user.name }}` })
+export class ProfileComponent { user!: User; }
+```
+
+Beneficio: detección temprana de errores y mejor autocompletado en editores.
+
+---
+
+## 7. Ejemplo Completo
+
+Componente con Signals y efecto reactivo:
+
+```typescript
+import { Component, signal, effect } from '@angular/core';
+
+@Component({
+  selector: 'app-signal-demo',
+  standalone: true,
+  template: `
+    <p>Valor actual: {{ value() }}</p>
+    <button (click)="increase()">Incrementar</button>
+  `
+})
+export class SignalDemoComponent {
+  value = signal(0);
+
+  constructor() {
+    effect(() => console.log('Nuevo valor:', this.value()));
+  }
+
+  increase() { this.value.update(v => v + 1); }
+}
+```
+
+Ejecución:
+
+```bash
+ng serve
+```
+
+---
+
+## 8. Conclusión
+
+Angular 21 redefine la experiencia de desarrollo con un modelo reactivo nativo y un entorno de construcción ultrarrápido. Las señales reemplazan la complejidad innecesaria de `RxJS` en estados locales, Vite reduce drásticamente los tiempos de build, y las optimizaciones de SSR y Zone.js opcional convierten a Angular en una plataforma moderna, veloz y adaptable para aplicaciones web de nueva generación.
